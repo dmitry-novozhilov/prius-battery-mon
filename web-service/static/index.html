@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>Prius battery monitor</title>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <link rel="icon" type="image/svg" href="favicon.svg">
+        <script src="ui.js"></script>
+        <style>
+            body {margin: 8px 0;}
+            h1 {margin: 10px 0; font-family: sans-serif;}
+            table#gauges {font-size: 1.5vw; border-collapse: separate; border-spacing: 1px;}
+            table#gauges td {background-color: #eee;}
+            table#gauges td:nth-child(odd) {background-color: #fff;}
+            div#log {font-family: monospace; font-size: 9px; white-space: pre-line;}
+        </style>
+    </head>
+    <body>
+        <h1>Prius battery monitor</h1>
+        <table id=gauges></table>
+        <button onclick="startApp()" style="width:49%; height:50px">Start</button>
+        <button onclick="emulate()" style="width:49%; height:50px">Emulate</button>
+        <br/>
+        <div id="log"></div>
+    </body>
+</html>
