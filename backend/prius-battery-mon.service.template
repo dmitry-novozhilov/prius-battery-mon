@@ -1,0 +1,16 @@
+[Unit]
+Description=Prius battery monitor
+After=network.target
+
+[Service]
+Type=simple
+
+Restart=on-failure
+RestartSec=10
+StartLimitInterval=60
+
+WorkingDirectory=@WORKDIR@
+ExecStart=@BIN_PATH@ --listen @LISTEN@
+
+[Install]
+WantedBy=default.target

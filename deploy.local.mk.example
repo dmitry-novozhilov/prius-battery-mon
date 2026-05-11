@@ -1,0 +1,7 @@
+# Copy this file to deploy.local.mk and fill in your values.
+# deploy.local.mk is gitignored and is auto-included by the Makefile.
+
+DEPLOY_HOST := your-ssh-alias
+DEPLOY_PATH := /absolute/path/to/prius-battery-mon
+LISTEN      := 127.0.0.1:8080
+# SYSTEMD_UNIT := prius-battery-mon   # uncomment to override

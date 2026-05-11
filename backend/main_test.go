@@ -14,7 +14,7 @@ import (
 	"testing"
 	"time"
 
-	api "github.com/dnovozhilov/prius-battery-mon/web-service/internal/api"
+	api "github.com/dnovozhilov/prius-battery-mon/backend/internal/api"
 )
 
 func newTestHandler(t *testing.T) (*snapshotHandler, string) {

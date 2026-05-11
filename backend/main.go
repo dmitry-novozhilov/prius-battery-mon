@@ -16,7 +16,7 @@ import (
 	"os"
 	"time"
 
-	api "github.com/dnovozhilov/prius-battery-mon/web-service/internal/api"
+	api "github.com/dnovozhilov/prius-battery-mon/backend/internal/api"
 )
 
 func init() {

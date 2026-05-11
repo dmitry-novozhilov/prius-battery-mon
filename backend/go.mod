@@ -1,4 +1,4 @@
-module github.com/dnovozhilov/prius-battery-mon/web-service
+module github.com/dnovozhilov/prius-battery-mon/backend
 
 go 1.25.0
 
