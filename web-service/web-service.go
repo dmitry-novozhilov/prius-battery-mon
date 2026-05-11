@@ -55,8 +55,6 @@ func main() {
 
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 
-		log.Printf("http req %s %s\n", r.Method, r.URL)
-
 		if r.Method == http.MethodGet {
 			staticHandler.ServeHTTP(w, r)
 			return
