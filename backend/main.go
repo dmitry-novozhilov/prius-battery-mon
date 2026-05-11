@@ -17,6 +17,7 @@ import (
 	"time"
 
 	api "github.com/dnovozhilov/prius-battery-mon/backend/internal/api"
+	"github.com/ogen-go/ogen/ogenerrors"
 )
 
 func init() {
@@ -50,7 +51,7 @@ func main() {
 }
 
 func newHTTPHandler(h api.Handler) (http.Handler, error) {
-	apiServer, err := api.NewServer(h)
+	apiServer, err := api.NewServer(h, api.WithErrorHandler(logErrorHandler))
 	if err != nil {
 		return nil, err
 	}
@@ -64,6 +65,11 @@ func newHTTPHandler(h api.Handler) (http.Handler, error) {
 	mux.Handle("/api/", apiServer)
 	mux.Handle("/", noCacheForHTML(staticHandler))
 	return mux, nil
+}
+
+func logErrorHandler(ctx context.Context, w http.ResponseWriter, r *http.Request, err error) {
+	log.Printf("api error: %s %s: %v", r.Method, r.URL.Path, err)
+	ogenerrors.DefaultErrorHandler(ctx, w, r, err)
 }
 
 func syncLoop(f *os.File) {
