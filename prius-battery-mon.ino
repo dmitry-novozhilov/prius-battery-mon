@@ -7,10 +7,18 @@ const int MUX_OUT_PINS_CNT = (1UL << COUNT_OF(MUX_CHAN_SELECT_PINS)) * COUNT_OF(
 #define NTC_PIN A2
 #define MEASUREMENTS_CNT 100
 
+// --- NTC params (MF55 10k, B=3435; pull-up 10k к +3.3В, NTC к GND; ADC 12 бит)
+#define NTC_R0_OHM       10000
+#define NTC_T0_CELSIUS   25
+#define NTC_B            3435
+#define NTC_PULLUP_OHM   10000
+#define ADC_BITS         12
+
 // --- BLE UUIDs
 #define SERVICE_UUID        "9709c63e-d287-44fa-a0ef-59e3ffd6bc70"
 #define CHAR_SNAPSHOT_UUID  "9709c63e-d287-44fa-a0ef-59e3ffd6bc71"  // READ
 #define CHAR_NOTIFY_UUID    "9709c63e-d287-44fa-a0ef-59e3ffd6bc72"  // NOTIFY
+#define CHAR_PARAMS_UUID    "9709c63e-d287-44fa-a0ef-59e3ffd6bc73"  // READ — JSON c параметрами NTC
 
 #define BLE_DEVICE_NAME "PriusBattMon"
 
@@ -18,6 +26,7 @@ uint16_t measurements[MUX_OUT_PINS_CNT];
 
 NimBLECharacteristic* pSnapshotChar = nullptr;
 NimBLECharacteristic* pNotifyChar   = nullptr;
+NimBLECharacteristic* pParamsChar   = nullptr;
 NimBLEServer*         pServer       = nullptr;
 volatile bool         deviceConnected = false;
 
@@ -50,6 +59,13 @@ void setupBLE() {
 
   pNotifyChar = pService->createCharacteristic(CHAR_NOTIFY_UUID, NIMBLE_PROPERTY::NOTIFY | NIMBLE_PROPERTY::READ);
   pNotifyChar->setValue((uint8_t*)measurements, sizeof(measurements));
+
+  pParamsChar = pService->createCharacteristic(CHAR_PARAMS_UUID, NIMBLE_PROPERTY::READ);
+  char paramsJson[128];
+  snprintf(paramsJson, sizeof(paramsJson),
+    "{\"r0\":%d,\"t0\":%d,\"b\":%d,\"pullup\":%d,\"adc_bits\":%d,\"sensors_cnt\":%d}",
+    NTC_R0_OHM, NTC_T0_CELSIUS, NTC_B, NTC_PULLUP_OHM, ADC_BITS, MUX_OUT_PINS_CNT);
+  pParamsChar->setValue((uint8_t*)paramsJson, strlen(paramsJson));
 
   NimBLEAdvertising* pAdv = NimBLEDevice::getAdvertising();
   pAdv->addServiceUUID(SERVICE_UUID);
@@ -133,26 +149,3 @@ void select_chan(int chan_idx) {
     delay(100);
   }
 }
-
-
-//float ntc(int NTC_PIN) {
-//  float raw = analogRead(NTC_PIN);
-////  Serial.printf("raw=%f\n", raw);
-//  float maxAdc = (float)((1 << ADC_BITS) - 1);
-//
-//  // Проверка на ошибки (обрыв или КЗ)
-//  if (raw <= 0 || raw >= maxAdc) return -999;
-//
-//  // 1. Расчет сопротивления термистора для вашей схемы:
-//  // Rt = R_pullup / (MaxADC / raw - 1)
-//  float resistance = (float)NTC_PULLUP_RESISTANCE * (raw / (maxAdc - raw));
-//
-//  // 2. Уравнение Стейнхарта-Харта
-//  float temp;
-//  temp = log(resistance / NTC_RESISTANCE);       // ln(R/Ro)
-//  temp /= NTC_B_VALUE;                           // 1/B * ln(R/Ro)
-//  temp += 1.0f / (NTC_BASE_TEMP + 273.15f);      // + 1/To
-//  temp = 1.0f / temp - 273.15f;                  // Инвертируем и в Цельсии
-//
-//  return temp;
-//}

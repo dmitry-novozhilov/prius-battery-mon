@@ -1,0 +1,88 @@
+openapi: 3.0.3
+info:
+  title: Prius Battery Monitor API
+  version: 0.1.0
+paths:
+  /api/snapshot:
+    post:
+      operationId: postSnapshot
+      summary: Save measurements snapshot
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Snapshot'
+      responses:
+        '204':
+          description: Snapshot stored
+        '400':
+          description: Invalid request body
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+components:
+  schemas:
+    NtcParams:
+      type: object
+      additionalProperties: false
+      required:
+        - r0
+        - t0
+        - b
+        - pullup
+        - adc_bits
+        - sensors_cnt
+      properties:
+        r0:
+          type: integer
+          description: NTC resistance at T0, ohm
+        t0:
+          type: integer
+          description: NTC base temperature, degC
+        b:
+          type: integer
+          description: NTC B-parameter
+        pullup:
+          type: integer
+          description: Pull-up resistor, ohm
+        adc_bits:
+          type: integer
+          description: ADC resolution, bits
+        sensors_cnt:
+          type: integer
+          description: Number of sensors (length of raw)
+    Snapshot:
+      type: object
+      additionalProperties: false
+      required:
+        - ts
+        - device
+        - raw
+        - ntc
+      properties:
+        ts:
+          type: string
+          format: date-time
+          description: Client-side snapshot timestamp
+        device:
+          type: string
+          description: BLE device name
+        raw:
+          type: array
+          minItems: 32
+          maxItems: 32
+          items:
+            type: integer
+            minimum: 0
+            maximum: 65535
+        ntc:
+          $ref: '#/components/schemas/NtcParams'
+    Error:
+      type: object
+      required:
+        - message
+      properties:
+        message:
+          type: string

@@ -2,97 +2,117 @@
 
 package main
 
+//go:generate go run github.com/ogen-go/ogen/cmd/ogen --target ./internal/api --package api --clean api/openapi.yaml
+
 import (
+	"context"
 	"embed"
+	"encoding/json"
 	"flag"
-	"fmt"
-	"io"
 	"io/fs"
 	"log"
+	"mime"
 	"net/http"
 	"os"
 	"time"
+
+	api "github.com/dnovozhilov/prius-battery-mon/web-service/internal/api"
 )
 
-//go:embed static
-var static embed.FS
-var listenAddr string
-var tsvFile *os.File
-
-const tsvFilePath = "prius-battery-mon.tsv"
-
 func init() {
-	flag.StringVar(&listenAddr, "listen", ":8080", "ip and port to listen as web server")
-
-	{
-		var err error
-		tsvFile, err = os.OpenFile(tsvFilePath, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0600)
-		if err != nil {
-			log.Fatalf("failed to open %s: %v", tsvFilePath, err)
-		} else {
-			log.Printf("appending data to %s\n", tsvFilePath)
-		}
-		go func() {
-			tmr := time.NewTimer(time.Second)
-			defer tmr.Stop()
-			for range tmr.C {
-				if err := tsvFile.Sync(); err != nil {
-					log.Fatalf("failed to sync file: %v", err)
-				}
-			}
-		}()
-	}
+	_ = mime.AddExtensionType(".webmanifest", "application/manifest+json")
 }
+
+//go:embed all:static/dist
+var static embed.FS
 
 func main() {
+	listenAddr := flag.String("listen", ":8080", "ip and port to listen as web server")
+	jsonlPath := flag.String("jsonl", "prius-battery-mon.jsonl", "path to JSONL history file")
 	flag.Parse()
 
-	fs, err := fs.Sub(static, "static")
+	jsonlFile, err := os.OpenFile(*jsonlPath, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0600)
 	if err != nil {
-		log.Fatal(err)
+		log.Fatalf("open %s: %v", *jsonlPath, err)
 	}
-	staticHandler := http.FileServer(http.FS(fs))
+	defer jsonlFile.Close()
+	log.Printf("appending snapshots to %s", *jsonlPath)
+	go syncLoop(jsonlFile)
 
-	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-
-		if r.Method == http.MethodGet {
-			staticHandler.ServeHTTP(w, r)
-			return
-		}
-
-		if r.Method == http.MethodPost {
-			handleData(w, r)
-			return
-		}
-
-		http.NotFoundHandler().ServeHTTP(w, r)
-	})
-
-	log.Printf("listening on %s\n", listenAddr)
-	if err := http.ListenAndServe(listenAddr, nil); err != nil {
-		log.Fatalf("failed to listen %s: %v", listenAddr, err)
+	router, err := newHTTPHandler(&snapshotHandler{file: jsonlFile})
+	if err != nil {
+		log.Fatalf("router: %v", err)
+	}
+	log.Printf("listening on %s", *listenAddr)
+	if err := http.ListenAndServe(*listenAddr, router); err != nil {
+		log.Fatalf("listen %s: %v", *listenAddr, err)
 	}
 }
 
-func handleData(w http.ResponseWriter, r *http.Request) {
-	var err error
-	defer func() {
-		if err != nil {
-			w.WriteHeader(http.StatusInternalServerError)
-			log.Printf("failed to handle data: %v", err)
-		} else {
-			w.WriteHeader(http.StatusNoContent)
-		}
-	}()
-
-	data, err := io.ReadAll(r.Body)
+func newHTTPHandler(h api.Handler) (http.Handler, error) {
+	apiServer, err := api.NewServer(h)
 	if err != nil {
-		log.Printf("failed to read request body: %v", err)
+		return nil, err
 	}
-
-	data = append([]byte(time.Now().Format("2006-01-02 15:04:05")+"\t"), data...)
-
-	if _, err = tsvFile.Write(append(data, '\n')); err != nil {
-		err = fmt.Errorf("write %d bytes to file failed: %+w", len(data)+1, err)
+	sub, err := fs.Sub(static, "static/dist")
+	if err != nil {
+		return nil, err
 	}
+	staticHandler := http.FileServer(http.FS(sub))
+
+	mux := http.NewServeMux()
+	mux.Handle("/api/", apiServer)
+	mux.Handle("/", noCacheForHTML(staticHandler))
+	return mux, nil
+}
+
+func syncLoop(f *os.File) {
+	t := time.NewTicker(time.Second)
+	defer t.Stop()
+	for range t.C {
+		if err := f.Sync(); err != nil {
+			log.Printf("sync: %v", err)
+		}
+	}
+}
+
+func noCacheForHTML(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/", "/index.html", "/sw.js", "/manifest.webmanifest":
+			w.Header().Set("Cache-Control", "no-cache")
+		}
+		next.ServeHTTP(w, r)
+	})
+}
+
+type snapshotHandler struct{ file *os.File }
+
+type storedSnapshot struct {
+	ServerTs string        `json:"server_ts"`
+	Ts       time.Time     `json:"ts"`
+	Device   string        `json:"device"`
+	Raw      []int         `json:"raw"`
+	Ntc      api.NtcParams `json:"ntc"`
+}
+
+func (h *snapshotHandler) PostSnapshot(ctx context.Context, req *api.Snapshot) (api.PostSnapshotRes, error) {
+	if len(req.Raw) != req.Ntc.SensorsCnt {
+		return &api.Error{Message: "raw length must equal ntc.sensors_cnt"}, nil
+	}
+	stored := storedSnapshot{
+		ServerTs: time.Now().UTC().Format(time.RFC3339Nano),
+		Ts:       req.Ts,
+		Device:   req.Device,
+		Raw:      req.Raw,
+		Ntc:      req.Ntc,
+	}
+	line, err := json.Marshal(stored)
+	if err != nil {
+		return nil, err
+	}
+	if _, err := h.file.Write(append(line, '\n')); err != nil {
+		return nil, err
+	}
+	return &api.PostSnapshotNoContent{}, nil
 }

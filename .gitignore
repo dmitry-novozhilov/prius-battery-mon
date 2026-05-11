@@ -1,3 +1,7 @@
 web-service/ci.sh
 web-service/prius-battery-mon.service
 .vscode
+/bin/
+/web-service/prius-battery-mon.jsonl
+/web-service/static/dist/*
+!/web-service/static/dist/.gitkeep
