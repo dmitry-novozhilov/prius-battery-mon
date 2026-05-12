@@ -1,4 +1,4 @@
-import { useLayoutEffect, useRef } from 'preact/hooks';
+import { useEffect, useLayoutEffect, useRef, useState } from 'preact/hooks';
 import type { NtcParams } from '../ble';
 import { adcToCelsius, cellColor } from '../ntc';
 
@@ -15,6 +15,12 @@ interface Props {
 export function Gauges({ snapshots, params }: Props) {
   const count = params?.sensors_cnt ?? snapshots[0]?.raw.length ?? 32;
   const lastRowRef = useRef<HTMLDivElement | null>(null);
+  const [now, setNow] = useState(Date.now());
+
+  useEffect(() => {
+    const id = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(id);
+  }, []);
 
   useLayoutEffect(() => {
     lastRowRef.current?.scrollIntoView({ block: 'nearest' });
@@ -26,7 +32,7 @@ export function Gauges({ snapshots, params }: Props) {
         const isLast = idx === snapshots.length - 1;
         return (
           <div class="snapshot-row" ref={isLast ? lastRowRef : undefined}>
-            <span class="time">{formatTime(s.ts)}</span>
+            <span class="time" title={s.ts.toLocaleString()}>{formatAge(now - s.ts.getTime())}</span>
             <div class="cells">
               {Array.from({ length: count }, (_, i) => {
                 const adc = s.raw[i];
@@ -47,6 +53,14 @@ export function Gauges({ snapshots, params }: Props) {
   );
 }
 
-function formatTime(d: Date): string {
-  return d.toTimeString().slice(0, 8);
+function formatAge(ms: number): string {
+  const sec = Math.max(0, Math.floor(ms / 1000));
+  if (sec < 1) return 'now';
+  if (sec < 60) return `${sec}s`;
+  const min = Math.floor(sec / 60);
+  if (min < 60) return `${min}m`;
+  const hr = Math.floor(min / 60);
+  if (hr < 24) return `${hr}h`;
+  const day = Math.floor(hr / 24);
+  return `${day}d`;
 }
