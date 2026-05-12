@@ -8,6 +8,7 @@
 body {
   margin: 0;
   padding: 8px;
+  padding-bottom: 56px; /* room for the sticky legend */
 }
 
 h1 {
@@ -40,32 +41,67 @@ h1 {
   font-size: 0.9rem;
 }
 
-table.gauges {
-  border-collapse: separate;
-  border-spacing: 1px;
-  font-size: clamp(10px, 2.2vw, 14px);
-  width: 100%;
-  table-layout: fixed;
+.gauges {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
 }
 
-table.gauges th,
-table.gauges td {
-  text-align: center;
-  padding: 4px 2px;
-  background: #eee;
-  color: #111;
+.snapshot-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
 }
 
-table.gauges th {
-  background: #ddd;
-  font-weight: 600;
-}
-
-table.gauges th.time,
-table.gauges td.time {
-  font-family: ui-monospace, monospace;
-  font-size: 0.85em;
+.snapshot-row .time {
+  font-family: ui-monospace, "SF Mono", Consolas, monospace;
+  font-size: 11px;
+  color: #555;
   white-space: nowrap;
-  text-align: left;
-  padding-right: 6px;
+  flex: none;
 }
+
+.snapshot-row .cells {
+  flex: 1;
+  display: grid;
+  grid-template-columns: repeat(var(--cells-count, 32), 1fr);
+  gap: 1px;
+}
+
+.snapshot-row .cell {
+  height: 14px;
+  border-radius: 1px;
+}
+
+.legend {
+  position: sticky;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  margin-top: 12px;
+  padding: 6px 4px 4px;
+  background: #fff;
+  border-top: 1px solid #eee;
+}
+
+.legend-bar {
+  height: 12px;
+  border-radius: 2px;
+}
+
+.legend-labels {
+  position: relative;
+  height: 1.2em;
+  margin-top: 2px;
+  font-size: 11px;
+  color: #555;
+}
+
+.legend-labels span {
+  position: absolute;
+  transform: translateX(-50%);
+  white-space: nowrap;
+}
+
+.legend-labels span:first-child { transform: translateX(0); }
+.legend-labels span:last-child { transform: translateX(-100%); }

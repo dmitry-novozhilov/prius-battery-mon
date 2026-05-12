@@ -4,6 +4,7 @@ import { DEFAULT_NTC_PARAMS } from './ntc';
 import { postSnapshot } from './api';
 import { Gauges, type Snapshot } from './components/Gauges';
 import { Controls } from './components/Controls';
+import { Legend } from './components/Legend';
 
 const MAX_SNAPSHOTS = 500;
 
@@ -83,6 +84,7 @@ export function App() {
       />
       {error && <div class="error">Ошибка: {error}</div>}
       <Gauges snapshots={snapshots} params={params} />
+      <Legend />
     </main>
   );
 }
