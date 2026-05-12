@@ -5,3 +5,4 @@ deploy.local.mk
 /backend/prius-battery-mon.jsonl
 /backend/static/dist/*
 !/backend/static/dist/.gitkeep
+nginx.conf
