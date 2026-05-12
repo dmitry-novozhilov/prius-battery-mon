@@ -31,9 +31,9 @@ export function Gauges({ snapshots, params }: Props) {
       {snapshots.map((s, idx) => {
         const isLast = idx === snapshots.length - 1;
         return (
-          <div class="snapshot-row" ref={isLast ? lastRowRef : undefined}>
+          <div class="snapshot-row">
             <span class="time" title={s.ts.toLocaleString()}>{formatAge(now - s.ts.getTime())}</span>
-            <div class="cells">
+            <div class="cells" ref={isLast ? lastRowRef : undefined}>
               {Array.from({ length: count }, (_, i) => {
                 const adc = s.raw[i];
                 const t = params && adc !== undefined ? adcToCelsius(adc, params) : NaN;

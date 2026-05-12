@@ -42,15 +42,15 @@ h1 {
 }
 
 .gauges {
-  display: flex;
-  flex-direction: column;
-  gap: 1px;
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  column-gap: 6px;
+  row-gap: 1px;
+  align-items: center;
 }
 
 .snapshot-row {
-  display: flex;
-  align-items: center;
-  gap: 6px;
+  display: contents;
 }
 
 .snapshot-row .time {
@@ -58,11 +58,10 @@ h1 {
   font-size: 11px;
   color: #555;
   white-space: nowrap;
-  flex: none;
+  text-align: right;
 }
 
 .snapshot-row .cells {
-  flex: 1;
   display: grid;
   grid-template-columns: repeat(var(--cells-count, 32), 1fr);
   gap: 1px;
