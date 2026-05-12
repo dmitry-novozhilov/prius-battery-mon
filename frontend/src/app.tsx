@@ -10,7 +10,7 @@ import { Legend } from './components/Legend';
 // Group size for log-decay history: the last N snapshots are shown
 // raw, the previous N are merged into one row, the N before that into
 // the next row (doubling each step), and so on.
-const AGGREGATION_N = 2;
+const AGGREGATION_N = 10;
 
 export function App() {
   const bleRef = useRef<BleClient>();
