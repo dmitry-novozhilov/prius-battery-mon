@@ -1,12 +1,16 @@
-import { useEffect, useRef, useState } from 'preact/hooks';
+import { useEffect, useMemo, useRef, useState } from 'preact/hooks';
 import { BleClient, BLE_DEVICE_NAME, type NtcParams } from './ble';
 import { DEFAULT_NTC_PARAMS } from './ntc';
 import { postSnapshot } from './api';
+import { aggregateSnapshots } from './aggregate';
 import { Gauges, type Snapshot } from './components/Gauges';
 import { Controls } from './components/Controls';
 import { Legend } from './components/Legend';
 
-const MAX_SNAPSHOTS = 500;
+// Group size for log-decay history: the last N snapshots are shown
+// raw, the previous N are merged into one row, the N before that into
+// the next row (doubling each step), and so on.
+const AGGREGATION_N = 2;
 
 export function App() {
   const bleRef = useRef<BleClient>();
@@ -24,11 +28,7 @@ export function App() {
 
   const appendSnapshot = (data: Uint16Array, device: string) => {
     const ts = new Date();
-    setSnapshots((prev) => {
-      const next = prev.length >= MAX_SNAPSHOTS ? prev.slice(prev.length - MAX_SNAPSHOTS + 1) : prev.slice();
-      next.push({ ts, raw: data });
-      return next;
-    });
+    setSnapshots((prev) => [...prev, { ts, raw: data }]);
     const p = paramsRef.current;
     if (!p) return;
     postSnapshot({
@@ -48,6 +48,11 @@ export function App() {
     ];
     return () => { for (const off of offs) off(); };
   }, [ble]);
+
+  const aggregated = useMemo(
+    () => aggregateSnapshots(snapshots, AGGREGATION_N),
+    [snapshots],
+  );
 
   const handleConnect = async () => {
     setError(null);
@@ -83,7 +88,7 @@ export function App() {
         onEmulate={handleEmulate}
       />
       {error && <div class="error">Ошибка: {error}</div>}
-      <Gauges snapshots={snapshots} params={params} />
+      <Gauges snapshots={aggregated} params={params} />
       <Legend />
     </main>
   );

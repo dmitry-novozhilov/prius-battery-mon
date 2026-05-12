@@ -5,6 +5,9 @@ import { adcToCelsius, cellColor } from '../ntc';
 export interface Snapshot {
   ts: Date;
   raw: Uint16Array;
+  // Number of underlying snapshots this entry represents.
+  // Undefined or 1 means the entry is a raw single sample.
+  count?: number;
 }
 
 interface Props {
@@ -32,7 +35,12 @@ export function Gauges({ snapshots, params }: Props) {
         const isLast = idx === snapshots.length - 1;
         return (
           <div class="snapshot-row">
-            <span class="time" title={s.ts.toLocaleString()}>{formatAge(now - s.ts.getTime())}</span>
+            <span
+              class={`time${(s.count ?? 1) > 1 ? ' aggregated' : ''}`}
+              title={timeTitle(s)}
+            >
+              {formatAge(now - s.ts.getTime())}
+            </span>
             <div class="cells" ref={isLast ? lastRowRef : undefined}>
               {Array.from({ length: count }, (_, i) => {
                 const adc = s.raw[i];
@@ -51,6 +59,11 @@ export function Gauges({ snapshots, params }: Props) {
       })}
     </div>
   );
+}
+
+function timeTitle(s: Snapshot): string {
+  const base = s.ts.toLocaleString();
+  return s.count && s.count > 1 ? `${base} (среднее по ${s.count} снимкам)` : base;
 }
 
 function formatAge(ms: number): string {

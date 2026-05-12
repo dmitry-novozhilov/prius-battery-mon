@@ -61,6 +61,11 @@ h1 {
   text-align: right;
 }
 
+.snapshot-row .time.aggregated {
+  color: #999;
+  font-style: italic;
+}
+
 .snapshot-row .cells {
   display: grid;
   grid-template-columns: repeat(var(--cells-count, 32), 1fr);
