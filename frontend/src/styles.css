@@ -1,6 +1,8 @@
 :root {
-  color-scheme: light dark;
+  color-scheme: light;
   font-family: system-ui, -apple-system, sans-serif;
+  color: #111;
+  background: #fff;
 }
 
 body {
@@ -51,6 +53,7 @@ table.gauges td {
   text-align: center;
   padding: 4px 2px;
   background: #eee;
+  color: #111;
 }
 
 table.gauges th {
@@ -58,8 +61,11 @@ table.gauges th {
   font-weight: 600;
 }
 
-table.gauges tr.raw td {
-  background: #f7f7f7;
-  font-size: 0.75em;
-  color: #666;
+table.gauges th.time,
+table.gauges td.time {
+  font-family: ui-monospace, monospace;
+  font-size: 0.85em;
+  white-space: nowrap;
+  text-align: left;
+  padding-right: 6px;
 }
