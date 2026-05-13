@@ -89,7 +89,7 @@ function averageSnapshots(bucket: Snapshot[]): Snapshot {
   const avg = new Uint16Array(N);
   for (let i = 0; i < N; i++) avg[i] = Math.round(sums[i] / totalCount);
   return {
-    ts: bucket[bucket.length - 1].ts,
+    ts: bucket[0].ts,
     raw: avg,
     count: totalCount,
   };
