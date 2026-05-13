@@ -2,15 +2,13 @@ import { useEffect, useMemo, useRef, useState } from 'preact/hooks';
 import { BleClient, BLE_DEVICE_NAME, type NtcParams } from './ble';
 import { DEFAULT_NTC_PARAMS } from './ntc';
 import { postSnapshot } from './api';
-import { aggregateSnapshots } from './aggregate';
+import { aggregateSnapshots, pickAggregationN } from './aggregate';
 import { Gauges, type Snapshot } from './components/Gauges';
 import { Controls } from './components/Controls';
 import { Legend } from './components/Legend';
 
-// Group size for log-decay history: the last N snapshots are shown
-// raw, the previous N are merged into one row, the N before that into
-// the next row (doubling each step), and so on.
-const AGGREGATION_N = 10;
+// Row height in px: must match .cell height + grid row-gap in styles.css.
+const ROW_HEIGHT = 15;
 
 export function App() {
   const bleRef = useRef<BleClient>();
@@ -22,9 +20,12 @@ export function App() {
   const [snapshots, setSnapshots] = useState<Snapshot[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [emulating, setEmulating] = useState(false);
+  const [targetRows, setTargetRows] = useState(20);
 
   const paramsRef = useRef<NtcParams | null>(null);
   paramsRef.current = params;
+
+  const gaugesAreaRef = useRef<HTMLDivElement | null>(null);
 
   const appendSnapshot = (data: Uint16Array, device: string) => {
     const ts = new Date();
@@ -49,9 +50,25 @@ export function App() {
     return () => { for (const off of offs) off(); };
   }, [ble]);
 
+  useEffect(() => {
+    const el = gaugesAreaRef.current;
+    if (!el) return;
+    const ro = new ResizeObserver(([entry]) => {
+      const rows = Math.max(1, Math.floor(entry.contentRect.height / ROW_HEIGHT));
+      setTargetRows(rows);
+    });
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+
+  const aggregationN = useMemo(
+    () => pickAggregationN(snapshots.length, targetRows),
+    [snapshots.length, targetRows],
+  );
+
   const aggregated = useMemo(
-    () => aggregateSnapshots(snapshots, AGGREGATION_N),
-    [snapshots],
+    () => aggregateSnapshots(snapshots, aggregationN),
+    [snapshots, aggregationN],
   );
 
   const handleConnect = async () => {
@@ -88,7 +105,9 @@ export function App() {
         onEmulate={handleEmulate}
       />
       {error && <div class="error">Ошибка: {error}</div>}
-      <Gauges snapshots={aggregated} params={params} />
+      <div class="gauges-area" ref={gaugesAreaRef}>
+        <Gauges snapshots={aggregated} params={params} />
+      </div>
       <Legend />
     </main>
   );

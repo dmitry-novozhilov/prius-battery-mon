@@ -40,6 +40,42 @@ export function aggregateSnapshots(snapshots: Snapshot[], n: number): Snapshot[]
   return out;
 }
 
+/**
+ * Number of rows aggregateSnapshots would produce for the given K and N,
+ * without actually doing the averaging. Used to pick N to match a row budget.
+ */
+export function aggregatedRowCount(K: number, n: number): number {
+  if (K <= 0 || n <= 0) return 0;
+  const raw = Math.min(n, K);
+  let remaining = K - raw;
+  let bucketSize = n;
+  let rows = raw;
+  while (remaining > 0) {
+    rows++;
+    remaining -= Math.min(bucketSize, remaining);
+    bucketSize *= 2;
+  }
+  return rows;
+}
+
+/**
+ * Pick the largest N such that aggregatedRowCount(K, N) <= targetRows.
+ * If K is already <= targetRows, returns K (no aggregation needed).
+ */
+export function pickAggregationN(K: number, targetRows: number): number {
+  if (K <= 0) return 1;
+  if (targetRows <= 0) return 1;
+  if (K <= targetRows) return K;
+  let lo = 1;
+  let hi = targetRows; // raw tail can't exceed the budget
+  while (lo < hi) {
+    const mid = Math.floor((lo + hi + 1) / 2);
+    if (aggregatedRowCount(K, mid) <= targetRows) lo = mid;
+    else hi = mid - 1;
+  }
+  return Math.max(1, lo);
+}
+
 function averageSnapshots(bucket: Snapshot[]): Snapshot {
   if (bucket.length === 1) return bucket[0];
   const N = bucket[0].raw.length;
